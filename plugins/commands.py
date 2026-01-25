@@ -19,7 +19,7 @@ async def start_handler(client: Client, message: Message):
 async def help_handler(client: Client, message: Message):
     text = (
         "**📚 Help Menu**\n\n"
-        "**/tk** - Reply to a video to start removing tracks\n'
+        "**/tk** - Reply to a video to start removing tracks\n"
         "**/media** - (Video/Document)\n"
         "**/cancel** - Cancel current task\n\n"
         "**This Is Paid Bot Powered By**\n"
