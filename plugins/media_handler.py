@@ -18,7 +18,7 @@ async def track_killer_handler(client: Client, message: Message):
     
     # 1. Permission Check
     if Config.BOT_MODE == "private" and message.from_user.id not in Config.ADMINS:
-        return await message.reply_text("❌ Bot is in Private Mode.")
+        return await message.reply_text("This is Private/Paid Bot Provided By @World_Fastest_Bots.")
         
     # 2. Media Check
     reply = message.reply_to_message
