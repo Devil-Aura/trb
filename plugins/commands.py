@@ -5,7 +5,7 @@ from config import Config
 @Client.on_message(filters.command("start"))
 async def start_handler(client: Client, message: Message):
     await message.reply_text(
-        "👋 **Welcome to Track Remover Bot!**\n\n"
+        "👋 **Welcome to Track Killer Bot!**\n\n"
         "I can help you remove Audio and Subtitle tracks from videos.\n"
         "Just reply to a video with `/tk` to start.\n\n"
         "**Features:**\n"
@@ -19,17 +19,11 @@ async def start_handler(client: Client, message: Message):
 async def help_handler(client: Client, message: Message):
     text = (
         "**📚 Help Menu**\n\n"
-        "**/tk** - Reply to a video to start removing tracks\n"
-        "**/h** - Quick keep Hindi audio + English subtitles\n"
-        "**/he** - Quick keep Hindi/English audio + English subtitles\n"
-        "**/mode** - Switch between Private/Public mode (Owner only)\n"
-        "**/config** - Configure auto-remove settings\n"
-        "**/media** - Toggle output format (Video/Document)\n"
+        "**/tk** - Reply to a video to start removing tracks\n'
+        "**/media** - (Video/Document)\n"
         "**/cancel** - Cancel current task\n\n"
-        "**Admin Commands:**\n"
-        "**/addadmin** - Add a new admin\n"
-        "**/remadmin** - Remove an admin\n"
-        "**/admins** - List admins"
+        "**This Is Paid Bot Powered By**\n"
+        "**@World_Fastest_Bots** (Contact For Access)"
     )
     await message.reply_text(text)
 
