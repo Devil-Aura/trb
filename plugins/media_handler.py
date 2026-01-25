@@ -3,14 +3,15 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery
 from config import Config
-from helpers.ffmpeg_tools import get_media_info
+from helpers.ffmpeg_tools import get_media_info, process_video
 from helpers.keyboards import get_track_selection_keyboard
+from helpers.utils import cleanup_files
 
 @Client.on_message(filters.command([
     "tk", "trackkiller", 
     "remaudio", "remallaudio", 
     "remsubtitles", "remallsubtitles", 
-    "remall"
+    "remall", "h", "he"
 ]) & filters.reply)
 async def track_killer_handler(client: Client, message: Message):
     cmd = message.command[0]
@@ -51,47 +52,76 @@ async def track_killer_handler(client: Client, message: Message):
         info = await get_media_info(file_path)
         if not info:
             client.task_semaphore.release()
-            os.remove(file_path)
+            cleanup_files([file_path])
             return await status_msg.edit("❌ Failed to detect media info.")
             
-        # Determine Pre-selections based on command
+        # --- Handle Quick Commands (/h and /he) ---
+        if cmd in ["h", "he"]:
+            await status_msg.edit("⚙️ Quick processing... Please wait.")
+            
+            # Identify tracks to KEEP
+            # /h: Hindi audio only, English/Songs subs only
+            # /he: Hindi & English audio, English/Songs subs only
+            keep_audio = []
+            for s in info['audio']:
+                lang = s['lang'].lower()
+                if 'hin' in lang:
+                    keep_audio.append(s['index'])
+                elif cmd == "he" and 'eng' in lang:
+                    keep_audio.append(s['index'])
+            
+            keep_subs = []
+            for s in info['subtitle']:
+                lang = s['lang'].lower()
+                title = s['title'].lower()
+                if 'eng' in lang or 'sign' in title or 'song' in title:
+                    keep_subs.append(s['index'])
+            
+            output_path = f"downloads/processed_{task_id}.mkv"
+            success = await process_video(file_path, output_path, keep_audio, keep_subs, info['audio'], info['subtitle'])
+            
+            if success:
+                await status_msg.edit("⬆️ Uploading quick processed file...")
+                if Config.DEFAULT_UPLOAD_MODE == "video":
+                    await client.send_video(chat_id=message.chat.id, video=output_path, caption=f"✅ Quick processed (/{cmd})")
+                else:
+                    await client.send_document(chat_id=message.chat.id, document=output_path, caption=f"✅ Quick processed (/{cmd})")
+                await status_msg.delete()
+            else:
+                await status_msg.edit("❌ Quick processing failed.")
+            
+            cleanup_files([file_path, output_path])
+            client.task_semaphore.release()
+            return
+
+        # --- Normal Flow ---
         selected_audio = set()
         selected_subs = set()
         
         if cmd == "remallaudio" or cmd == "remall":
             selected_audio = {s['index'] for s in info['audio']}
-            
         if cmd == "remallsubtitles" or cmd == "remall":
             selected_subs = {s['index'] for s in info['subtitle']}
             
-        # Determine Initial View
         current_view = "audio"
         if cmd in ["remsubtitles", "remallsubtitles"]:
             current_view = "sub"
             
-        # Store State
         client.active_tasks[message.from_user.id] = {
-            "task_id": task_id,
-            "input_path": file_path,
-            "info": info,
-            "selected_audio": selected_audio,
-            "selected_subs": selected_subs,
-            "status_msg": status_msg,
-            "current_view": current_view,
-            "page": 0
+            "task_id": task_id, "input_path": file_path, "info": info,
+            "selected_audio": selected_audio, "selected_subs": selected_subs,
+            "status_msg": status_msg, "current_view": current_view, "page": 0
         }
         
-        # Show Menu
         if current_view == "audio":
             if not info['audio']:
                 if info['subtitle']:
-                    # Fallback to subs if no audio
                     client.active_tasks[message.from_user.id]["current_view"] = "sub"
                     keyboard = get_track_selection_keyboard(info['subtitle'], selected_subs, 0, is_audio=False)
                     await status_msg.edit("📝 Select Subtitle Tracks to REMOVE:", reply_markup=keyboard)
                 else:
                     client.task_semaphore.release()
-                    os.remove(file_path)
+                    cleanup_files([file_path])
                     return await status_msg.edit("❌ No tracks found.")
             else:
                 keyboard = get_track_selection_keyboard(info['audio'], selected_audio, 0, is_audio=True)
@@ -99,7 +129,7 @@ async def track_killer_handler(client: Client, message: Message):
         else:
             if not info['subtitle']:
                 client.task_semaphore.release()
-                os.remove(file_path)
+                cleanup_files([file_path])
                 return await status_msg.edit("❌ No Subtitle tracks found.")
             else:
                 keyboard = get_track_selection_keyboard(info['subtitle'], selected_subs, 0, is_audio=False)
@@ -108,5 +138,6 @@ async def track_killer_handler(client: Client, message: Message):
     except Exception as e:
         if client.task_semaphore.locked():
              client.task_semaphore.release()
+        cleanup_files([dl_path] if 'dl_path' in locals() else [])
         print(f"Error: {e}")
         await status_msg.edit(f"❌ Error occurred: {str(e)}")
