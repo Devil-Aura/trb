@@ -20,6 +20,8 @@ async def help_handler(client: Client, message: Message):
     text = (
         "**📚 Help Menu**\n\n"
         "**/tk** - Reply to a video to start removing tracks\n"
+        "**/h** - Quick keep Hindi audio + English subtitles\n"
+        "**/he** - Quick keep Hindi/English audio + English subtitles\n"
         "**/mode** - Switch between Private/Public mode (Owner only)\n"
         "**/config** - Configure auto-remove settings\n"
         "**/media** - Toggle output format (Video/Document)\n"
