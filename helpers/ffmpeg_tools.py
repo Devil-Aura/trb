@@ -88,12 +88,11 @@ async def process_video(input_path, output_path, keep_audio_indices, keep_subtit
         cmd.extend(["-map", f"0:{s['index']}"])
         
     # Set Dispositions (Default flags)
-    # Reset all dispositions first (copy is default behavior, we might need to be explicit)
     cmd.extend(["-c", "copy"]) # Copy codecs to avoid re-encoding
     
     # Audio Dispositions
     if audio_to_map:
-        # First audio is default (Hindi or whatever is sorted first)
+        # First audio (Hindi) is default
         cmd.extend([f"-disposition:a:0", "default"])
         # Remove default from others
         for i in range(1, len(audio_to_map)):
@@ -101,10 +100,7 @@ async def process_video(input_path, output_path, keep_audio_indices, keep_subtit
             
     # Subtitle Dispositions
     if subs_to_map:
-        # First subtitle (English) NOT default? 
-        # Requirement: "English language should be first but not Default selected"
-        # Usually implies no subtitles are default, or a specific forced one?
-        # Let's set all to 0 (not default) to respect "not Default selected"
+        # English subtitles first (sorted 0) but NOT default
         for i in range(len(subs_to_map)):
             cmd.extend([f"-disposition:s:{i}", "0"])
 
