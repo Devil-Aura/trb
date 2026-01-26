@@ -18,7 +18,7 @@ async def track_killer_handler(client: Client, message: Message):
     
     # 1. Permission Check
     if Config.BOT_MODE == "private" and message.from_user.id not in Config.ADMINS:
-        return await message.reply_text("This is Private/Paid Bot Provided By @World_Fastest_Bots.")
+        return await message.reply_text("❌ Bot is in Private Mode.")
         
     # 2. Media Check
     reply = message.reply_to_message
@@ -64,7 +64,7 @@ async def track_killer_handler(client: Client, message: Message):
             # /he: Hindi & English audio, English/Songs subs only
             keep_audio = []
             for s in info['audio']:
-                lang = s['lang'].lower()
+                lang = (s.get('lang') or "").lower()
                 if 'hin' in lang:
                     keep_audio.append(s['index'])
                 elif cmd == "he" and 'eng' in lang:
@@ -72,8 +72,9 @@ async def track_killer_handler(client: Client, message: Message):
             
             keep_subs = []
             for s in info['subtitle']:
-                lang = s['lang'].lower()
-                title = s['title'].lower()
+                lang = (s.get('lang') or "").lower()
+                title = (s.get('title') or "").lower()
+                # Check for English or signs/songs keywords
                 if 'eng' in lang or 'sign' in title or 'song' in title:
                     keep_subs.append(s['index'])
             
@@ -138,6 +139,8 @@ async def track_killer_handler(client: Client, message: Message):
     except Exception as e:
         if client.task_semaphore.locked():
              client.task_semaphore.release()
-        cleanup_files([dl_path] if 'dl_path' in locals() else [])
+        # Ensure cleanup on failure
+        if 'file_path' in locals():
+            cleanup_files([file_path])
         print(f"Error: {e}")
         await status_msg.edit(f"❌ Error occurred: {str(e)}")
