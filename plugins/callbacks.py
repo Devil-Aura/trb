@@ -118,18 +118,21 @@ async def callback_handler(client: Client, query: CallbackQuery):
         if success:
             await query.message.edit("⬆️ Uploading processed file...")
             
+            filename = task.get("filename", "video.mp4")
+            caption = f"✅ **Processed with Track Remover Bot**\n\n📄 **Filename:** `{filename}`"
+            
             try:
                 if Config.DEFAULT_UPLOAD_MODE == "video":
                     await client.send_video(
                         chat_id=query.message.chat.id,
                         video=output_path,
-                        caption="✅ **Processed with Track Remover Bot**"
+                        caption=caption
                     )
                 else:
                     await client.send_document(
                         chat_id=query.message.chat.id,
                         document=output_path,
-                        caption="✅ **Processed with Track Remover Bot**"
+                        caption=caption
                     )
                 await query.message.delete()
             except Exception as e:
