@@ -40,7 +40,8 @@ async def track_killer_handler(client: Client, message: Message):
         await client.task_semaphore.acquire()
         
         task_id = f"{message.from_user.id}_{message.id}"
-        dl_path = f"downloads/{task_id}_{media.file_name or 'video.mp4'}"
+        filename = media.file_name or "video.mp4"
+        dl_path = f"downloads/{task_id}_{filename}"
         
         file_path = await reply.download(file_name=dl_path)
         if not file_path:
@@ -60,8 +61,6 @@ async def track_killer_handler(client: Client, message: Message):
             await status_msg.edit("⚙️ Quick processing... Please wait.")
             
             # Identify tracks to KEEP
-            # /h: Hindi audio only, English/Songs subs only
-            # /he: Hindi & English audio, English/Songs subs only
             keep_audio = []
             for s in info['audio']:
                 lang = (s.get('lang') or "").lower()
@@ -74,19 +73,35 @@ async def track_killer_handler(client: Client, message: Message):
             for s in info['subtitle']:
                 lang = (s.get('lang') or "").lower()
                 title = (s.get('title') or "").lower()
-                # Check for English or signs/songs keywords
-                if 'eng' in lang or 'sign' in title or 'song' in title:
+                
+                # Logic: Only keep English, English signs/songs, generic songs/signs, and Hindi signs.
+                # Remove other languages even if they have "Signs" in title (like Telugu/Tamil signs).
+                
+                is_english = 'eng' in lang
+                is_hindi = 'hin' in lang
+                has_sign_song = any(x in title for x in ['sign', 'song', 'sing'])
+                
+                if is_english:
                     keep_subs.append(s['index'])
-            
+                elif is_hindi and 'sign' in title:
+                    keep_subs.append(s['index'])
+                elif not lang or lang == 'und': # Generic fallback for songs/signs
+                    if has_sign_song:
+                        keep_subs.append(s['index'])
+                elif has_sign_song and not is_english and not is_hindi:
+                    # Specifically remove other language signs like Telugu Signs, Tamil Signs
+                    continue 
+
             output_path = f"downloads/processed_{task_id}.mkv"
             success = await process_video(file_path, output_path, keep_audio, keep_subs, info['audio'], info['subtitle'])
             
             if success:
                 await status_msg.edit("⬆️ Uploading quick processed file...")
+                caption = f"✅ **Quick processed (/{cmd})**\n\n📄 **Filename:** {filename}"
                 if Config.DEFAULT_UPLOAD_MODE == "video":
-                    await client.send_video(chat_id=message.chat.id, video=output_path, caption=f"✅ Quick processed (/{cmd})")
+                    await client.send_video(chat_id=message.chat.id, video=output_path, caption=caption)
                 else:
-                    await client.send_document(chat_id=message.chat.id, document=output_path, caption=f"✅ Quick processed (/{cmd})")
+                    await client.send_document(chat_id=message.chat.id, document=output_path, caption=caption)
                 await status_msg.delete()
             else:
                 await status_msg.edit("❌ Quick processing failed.")
@@ -111,7 +126,8 @@ async def track_killer_handler(client: Client, message: Message):
         client.active_tasks[message.from_user.id] = {
             "task_id": task_id, "input_path": file_path, "info": info,
             "selected_audio": selected_audio, "selected_subs": selected_subs,
-            "status_msg": status_msg, "current_view": current_view, "page": 0
+            "status_msg": status_msg, "current_view": current_view, "page": 0,
+            "filename": filename
         }
         
         if current_view == "audio":
@@ -139,7 +155,6 @@ async def track_killer_handler(client: Client, message: Message):
     except Exception as e:
         if client.task_semaphore.locked():
              client.task_semaphore.release()
-        # Ensure cleanup on failure
         if 'file_path' in locals():
             cleanup_files([file_path])
         print(f"Error: {e}")
