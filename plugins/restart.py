@@ -4,10 +4,9 @@ from pyrogram import Client, filters
 from config import Config
 
 @Client.on_message(filters.command("restart") & filters.user(Config.ADMINS))
-async def restart_bot(client, message):
+async def restart_handler(client, message):
     await message.reply_text("♻️ Restarting bot & cleaning temp files…")
 
-    # cleanup downloads
     if os.path.exists("downloads"):
         for f in os.listdir("downloads"):
             try:
