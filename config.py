@@ -17,7 +17,7 @@ class Config:
     BOT_MODE = "private" 
     
     # Concurrent Task Limit
-    MAX_CONCURRENT_TASKS = 4
+    MAX_CONCURRENT_TASKS = 2
     
     # Default output format: 'document' or 'video'
     DEFAULT_UPLOAD_MODE = "document"
